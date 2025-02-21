@@ -343,11 +343,13 @@ wau_total = (
 print(int(dau_total))
 print(int(wau_total)) 
 
-
+dau_total = int(dau_total)
+wau_total = int(wau_total)
+sticky  = round((dau_total / wau_total * 100),2)
 # In[35]:
 
 
-print(dau_total / wau_total * 100) 
+#print(dau_total / wau_total * 100) 
 
 
 # In[36]:
@@ -704,6 +706,12 @@ import seaborn as sns
 
 st.title('Дашборд для компании "Простые вещи"')
 
+st.markdown("""
+📊 Этот дашборд предоставляет ключевые метрики пользовательской активности и финансовых показателей. 
+Вы можете выбрать интересующий график из списка, чтобы проанализировать удержание пользователей, 
+динамику доходов и другие важные показатели. 🔍
+""")
+
 # Выбор графика
 option = st.selectbox("Выберите график", 
                       ["RFM Analysis", "Retention Rate", "Churn Rate", "LTV", 
@@ -884,3 +892,104 @@ elif option == "Mean Revenue":
 elif option == "Mean Revenue with Rolling Average":
     st.pyplot(fig5)
     st.markdown(description_mean_revenue_rolling)
+
+word_d = dau_total  # Daily Active Users
+word_w = wau_total  # Weekly Active Users
+word_s = sticky  # Sticky Factor
+
+# Заголовок
+st.title('Метрики активности пользователей')
+
+# Выбор метрики
+metric_option = st.selectbox(
+    "Выберите метрику для просмотра",
+    ["DAU (Daily Active Users)", "WAU (Weekly Active Users)", "Sticky Factor (DAU/WAU)"]
+)
+
+# Отображение выбранной метрики
+if metric_option == "DAU (Daily Active Users)":
+    st.subheader('Показатель DAU')
+    st.markdown(f'Количество активных пользователей в день: **{word_d}**')
+    st.markdown("""
+        **DAU (Daily Active Users)** — количество уникальных пользователей, 
+        зашедших в приложение или сервис за последние 24 часа.
+    """)
+
+elif metric_option == "WAU (Weekly Active Users)":
+    st.subheader('Показатель WAU')
+    st.markdown(f'Количество активных пользователей в неделю: **{word_w}**')
+    st.markdown("""
+        **WAU (Weekly Active Users)** — количество уникальных пользователей,
+        зашедших в приложение в течение последней недели.
+    """)
+
+elif metric_option == "Sticky Factor (DAU/WAU)":
+    st.subheader('Показатель Sticky')
+    st.markdown(f'Коэффициент удержания пользователей (DAU/WAU): **{word_s}**')
+    st.markdown("""
+        **Sticky Factor** показывает, насколько часто пользователи возвращаются в приложение.
+        Рассчитывается как отношение DAU к WAU. Чем выше значение, тем лучше удержание.
+    """)
+
+import streamlit as st
+import pandas as pd
+
+# Функция чтения файла с автоматическим определением кодировки
+def read_csv_with_encoding(upload_file):
+    encodings = ["utf-8", "windows-1251", "ISO-8859-1"]
+    for enc in encodings:
+        try:
+            upload_file.seek(0)  # Возвращаемся в начало файла
+            return pd.read_csv(upload_file, sep=";", encoding=enc, low_memory=False), enc
+        except UnicodeDecodeError:
+            continue
+    return None, None
+
+# Интерфейс Streamlit
+st.title("📊 Анализ загруженных данных")
+
+# Боковая панель
+upload_file = st.sidebar.file_uploader("📂 Загрузите CSV", type=["csv"])
+
+if upload_file is not None:
+    df, detected_encoding = read_csv_with_encoding(upload_file)
+
+    if df is not None:
+        st.write(f"🔎 **Определённая кодировка файла**: **{detected_encoding}**")
+        st.write("📋 **Список колонок датасета:**")
+        st.write(df.columns.tolist())  # Выводим список колонок
+
+        # Опции обработки данных
+        show = st.sidebar.button("📊 Показать датасет")
+        process = st.sidebar.button("⚙️ Обработать данные")
+        slider_value = st.sidebar.slider("📉 Выберите значение", min_value=0, max_value=100)
+        select_option = st.sidebar.selectbox("📌 Выберите опцию", options=["Вариант 1", "Вариант 2"])
+
+        st.write(f"Выбранное значение: **{slider_value}**")
+        st.write(f"Выбранная опция: **{select_option}**")
+
+        if show:
+            st.write("📊 **Первые 5 строк загруженного датасета:**")
+            st.dataframe(df.head())
+
+            # Создание файла для скачивания
+            csv_data = df.to_csv(index=False).encode("utf-8")
+            st.download_button(label="📥 Скачать данные", file_name="processed_data.csv", data=csv_data)
+
+        if process:
+            st.write("⚙️ **Обработка данных**")
+            st.text("📋 Колонки датасета:")
+            st.write(df.columns.tolist())
+
+            # Удаление пустых значений
+            df_cleaned = df.dropna()
+            st.write(f"📊 Количество строк до очистки: **{len(df)}**")
+            st.write(f"✅ Количество строк после очистки: **{len(df_cleaned)}**")
+
+            # Сохранение обработанных данных
+            cleaned_csv = df_cleaned.to_csv(index=False).encode("utf-8")
+            st.download_button(label="📥 Скачать очищенные данные", file_name="cleaned_data.csv", data=cleaned_csv)
+
+    else:
+        st.error("❌ Ошибка при чтении файла. Попробуйте загрузить CSV с другой кодировкой.")
+
